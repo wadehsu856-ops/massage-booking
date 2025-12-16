@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, User, Users, AlertCircle, CheckCircle, X, Info, Calculator, Phone, Mail, Stethoscope, Save, Lock, Download, LogOut, FileText, Ban, Key, Trash2, Wifi, WifiOff, RefreshCw, Database, AlertTriangle, Send, ThumbsUp } from 'lucide-react';
+import { Clock, User, Users, AlertCircle, CheckCircle, X, Info, Calculator, Phone, Mail, Stethoscope, Save, Lock, Download, LogOut, FileText, Ban, Key, Trash2, Wifi, WifiOff, RefreshCw, Database, AlertTriangle, Send, ThumbsUp, Eraser } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, getDocs, orderBy, writeBatch } from 'firebase/firestore';
 
 // --- 0. Firebase Configuration & Initialization ---
-// ✅ Wade/Shirley 提供的真實金鑰
+// ✅ Wade/Shirley 提供的真實金鑰 (V3.3.2 Update)
 const firebaseConfig = {
   apiKey: "AIzaSyBo4bLSOFFFsjHeLjIvcgPlIDkPPNnSSRA",
   authDomain: "massage-appointment-system.firebaseapp.com",
@@ -26,7 +26,7 @@ try {
   console.error("Firebase 初始化失敗:", e);
 }
 
-// 系統代號 (用於顯示，非 Firebase App ID)
+// 系統代號
 const SYSTEM_ID = "massage_v1"; 
 
 // --- 1. 定義科部與人數資料 (Input Data) ---
@@ -148,7 +148,6 @@ const UserInfoForm = ({ userInfo, setUserInfo, departments, allocation, usedMap 
     };
 
     const selectedDeptInfo = allocation.data.find(d => d.id === userInfo.dept);
-    // Real-time calculation: Quota - Used
     const remaining = selectedDeptInfo ? selectedDeptInfo.quota - (usedMap[userInfo.dept] || 0) : 0;
     const isDeptFull = userInfo.dept && remaining <= 0;
 
@@ -240,6 +239,12 @@ const UserInfoForm = ({ userInfo, setUserInfo, departments, allocation, usedMap 
                         />
                     </div>
                 </div>
+            </div>
+            
+            {/* V3.3.1 Feature: Red Bold 14px Cancellation Info */}
+            <div className="bg-red-50 px-5 py-3 border-t border-red-100 text-sm font-bold text-red-600 flex items-center justify-center">
+                <Info className="w-5 h-5 mr-2 text-red-600" />
+                若要取消，請聯繫教學部珮暄 (分機 3751)
             </div>
         </div>
     );
@@ -397,7 +402,7 @@ const ConfirmModal = ({ isOpen, onClose, slot, onConfirm, userInfo, deptName, is
             {/* Final Action Area */}
             <div className="pt-2">
                 <p className="text-center text-xs text-red-500 font-bold mb-3 animate-pulse">
-                    ⚠ 確認完畢請按送出鍵 (Press Send to Confirm)
+                    ⚠ 確認完畢請按送出鍵
                 </p>
                 <button 
                     onClick={onConfirm}
@@ -413,13 +418,17 @@ const ConfirmModal = ({ isOpen, onClose, slot, onConfirm, userInfo, deptName, is
                     )}
                 </button>
             </div>
+            
+            {/* V3.3.1 Feature: Red Bold 14px Cancellation */}
+            <div className="text-center text-sm font-bold text-red-600 mt-4">
+                若需取消，請聯繫教學部珮暄 (分機 3751)
+            </div>
         </div>
       </div>
     </div>
   );
 };
 
-// NEW: Success Modal
 const SuccessModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
@@ -435,10 +444,15 @@ const SuccessModal = ({ isOpen, onClose }) => {
                 </div>
                 
                 <h3 className="text-2xl font-black text-slate-800 mb-2">您已成功預約！</h3>
-                <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+                <p className="text-slate-500 text-sm mb-6 leading-relaxed">
                     系統已成功寫入您的資料。<br/>
                     請記得準時前往 <span className="font-bold text-emerald-600">26 病房</span> 享受按摩。
                 </p>
+                
+                {/* V3.3.1 Feature: Red Bold 14px Cancellation */}
+                <div className="bg-red-50 p-3 rounded-lg text-sm text-red-600 font-bold mb-6 border border-red-100">
+                    若需取消，請聯繫教學部珮暄 (分機 3751)
+                </div>
                 
                 <button 
                     onClick={onClose}
@@ -453,27 +467,46 @@ const SuccessModal = ({ isOpen, onClose }) => {
 };
 
 // NEW: Delete Confirm Modal
-const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, isClearing }) => {
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, isClearing, mode, targetName }) => {
     if (!isOpen) return null;
+    
+    // UI Mode Configuration
+    const isSingle = mode === 'single';
+    const title = isSingle ? "刪除確認" : "紅色警戒：清除資料";
+    const mainText = isSingle ? `確定要刪除 [${targetName}] 的預約嗎？` : "確定要清空所有資料嗎？";
+    const subText = isSingle 
+        ? "刪除後名額將會釋出，無法復原。" 
+        : (<span>此操作將會移除所有住院醫師的預約紀錄，且<span className="font-bold text-red-600">無法復原</span>。</span>);
+    const confirmBtnText = isSingle ? "確認刪除 (Delete)" : "確認清空 (Delete All)";
+    const colorClass = isSingle ? "orange" : "red"; // Orange for single, Red for all
+
+    // Dynamic Tailwind classes construction (careful with dynamic class names in Tailwind)
+    // We use explicit full class names to be safe or simple conditionals
+    const headerColor = isSingle ? "bg-orange-500" : "bg-red-600";
+    const hoverBtnColor = isSingle ? "hover:bg-orange-600" : "hover:bg-red-700";
+    const btnColor = isSingle ? "bg-orange-500" : "bg-red-600";
+    const iconColor = isSingle ? "text-orange-500" : "text-red-600";
+    const ringColor = isSingle ? "ring-orange-100" : "ring-red-100";
+    const iconBg = isSingle ? "bg-orange-100" : "bg-red-100";
 
     return (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in zoom-in duration-200">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden ring-4 ring-red-100">
-                <div className="bg-red-600 p-4 text-white flex justify-between items-center">
+            <div className={`bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden ring-4 ${ringColor}`}>
+                <div className={`${headerColor} p-4 text-white flex justify-between items-center`}>
                     <h3 className="font-bold flex items-center gap-2 text-sm">
                         <AlertTriangle className="w-5 h-5" />
-                        紅色警戒：清除資料
+                        {title}
                     </h3>
-                    <button onClick={onClose} disabled={isClearing} className="hover:bg-red-700 p-1 rounded-full"><X className="w-4 h-4" /></button>
+                    <button onClick={onClose} disabled={isClearing} className={`hover:bg-black/20 p-1 rounded-full`}><X className="w-4 h-4" /></button>
                 </div>
                 <div className="p-6">
                     <div className="text-center mb-6">
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
+                        <div className={`w-16 h-16 ${iconBg} rounded-full flex items-center justify-center mx-auto mb-4 ${iconColor}`}>
                             <Trash2 className="w-8 h-8" />
                         </div>
-                        <h4 className="text-lg font-bold text-gray-800 mb-2">確定要清空所有資料嗎？</h4>
+                        <h4 className="text-lg font-bold text-gray-800 mb-2">{mainText}</h4>
                         <p className="text-sm text-gray-500">
-                            此操作將會移除所有住院醫師的預約紀錄，且<span className="font-bold text-red-600">無法復原</span>。
+                            {subText}
                         </p>
                     </div>
                     
@@ -488,9 +521,9 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, isClearing }) => {
                         <button 
                             onClick={onConfirm}
                             disabled={isClearing}
-                            className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition-all flex justify-center items-center"
+                            className={`flex-1 py-2.5 ${btnColor} ${hoverBtnColor} text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition-all flex justify-center items-center`}
                         >
-                            {isClearing ? '正在刪除...' : '確認清空 (Delete)'}
+                            {isClearing ? '處理中...' : confirmBtnText}
                         </button>
                     </div>
                 </div>
@@ -500,11 +533,11 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, isClearing }) => {
 }
 
 // NEW: Admin Dashboard Component with Clear Data & Force Refresh
-const AdminDashboard = ({ bookings, onClose, departments, onClearData, user }) => {
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
+const AdminDashboard = ({ bookings, onClose, departments, onClearData, user, onDeleteRow }) => {
+    const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'all' } or { type: 'single', id, name }
     const [isClearing, setIsClearing] = useState(false);
 
-    // Robust flattening using reduce instead of .flat() for better compatibility
+    // Robust flattening using reduce logic + including docId if available
     const bookingsList = useMemo(() => {
         return Object.entries(bookings).reduce((acc, [time, users]) => {
             return acc.concat(users.map(u => ({...u, time})));
@@ -528,11 +561,32 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user }) =
         document.body.removeChild(link);
     };
 
-    const handleConfirmClear = async () => {
+    // Trigger Clear All Modal
+    const handleClearAllClick = () => {
+        setDeleteTarget({ type: 'all' });
+    }
+
+    // Trigger Single Row Delete Modal
+    const handleRowDeleteClick = (docId, name) => {
+        if (!docId) {
+            alert("錯誤：資料 ID 遺失");
+            return;
+        }
+        setDeleteTarget({ type: 'single', id: docId, name: name });
+    }
+
+    // Execute Deletion based on target
+    const handleExecuteDelete = async () => {
+        if (!deleteTarget) return;
+
         setIsClearing(true);
-        await onClearData();
+        if (deleteTarget.type === 'all') {
+             await onClearData();
+        } else if (deleteTarget.type === 'single') {
+             await onDeleteRow(deleteTarget.id);
+        }
         setIsClearing(false);
-        setShowDeleteModal(false);
+        setDeleteTarget(null);
     }
 
     return (
@@ -553,10 +607,10 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user }) =
                     </div>
                     <div className="flex gap-3">
                         <button 
-                            onClick={() => setShowDeleteModal(true)}
+                            onClick={handleClearAllClick}
                             className="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors"
                         >
-                            <Trash2 className="w-4 h-4" /> 清空資料
+                            <Trash2 className="w-4 h-4" /> 清空所有資料
                         </button>
                         <button 
                             onClick={handleDownloadCSV}
@@ -616,7 +670,6 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user }) =
                         <div className="p-12 text-center text-slate-400 flex flex-col items-center">
                             <Database className="w-12 h-12 text-slate-200 mb-2" />
                             <p>目前還沒有人預約，可能大家都去跑 Code Blue 了。</p>
-                            <p className="text-xs mt-2 text-slate-300">如果您確定有人預約但沒看到，請確認網頁版本一致。</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -628,11 +681,12 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user }) =
                                         <th className="px-6 py-3">科部</th>
                                         <th className="px-6 py-3">Email</th>
                                         <th className="px-6 py-3">GSM</th>
+                                        <th className="px-6 py-3 text-right">操作</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {bookingsList.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50">
+                                        <tr key={idx} className="hover:bg-slate-50 group">
                                             <td className="px-6 py-4 font-mono font-bold text-slate-700">{row.time}</td>
                                             <td className="px-6 py-4 font-medium text-slate-900">{row.name}</td>
                                             <td className="px-6 py-4">
@@ -642,6 +696,15 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user }) =
                                             </td>
                                             <td className="px-6 py-4 text-slate-500">{row.email}</td>
                                             <td className="px-6 py-4 font-mono text-slate-500">***{row.gsm}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button 
+                                                    onClick={() => handleRowDeleteClick(row.id, row.name)}
+                                                    className="text-slate-400 hover:text-white hover:bg-orange-500 p-2 rounded-full transition-all"
+                                                    title="刪除此筆資料"
+                                                >
+                                                    <Eraser className="w-4 h-4" />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -656,10 +719,12 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user }) =
             </div>
 
             <DeleteConfirmModal 
-                isOpen={showDeleteModal} 
-                onClose={() => setShowDeleteModal(false)}
-                onConfirm={handleConfirmClear}
+                isOpen={!!deleteTarget} 
+                onClose={() => setDeleteTarget(null)}
+                onConfirm={handleExecuteDelete}
                 isClearing={isClearing}
+                mode={deleteTarget?.type}
+                targetName={deleteTarget?.name}
             />
         </div>
     );
@@ -672,8 +737,8 @@ const MassageBookingSystem = () => {
   
   // States
   const [userInfo, setUserInfo] = useState({ name: '', dept: '', email: '', gsm: '' });
-  const [user, setUser] = useState(null); // Firebase Auth User
-  const [isProcessing, setIsProcessing] = useState(false); // Loading state for write ops
+  const [user, setUser] = useState(null); 
+  const [isProcessing, setIsProcessing] = useState(false); 
   
   // Real-time Bookings State (From Firestore)
   const [bookings, setBookings] = useState({}); 
@@ -681,7 +746,7 @@ const MassageBookingSystem = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [formError, setFormError] = useState('');
-  const [successModalOpen, setSuccessModalOpen] = useState(false); // New state for success modal
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
   
   // Admin State
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -691,6 +756,8 @@ const MassageBookingSystem = () => {
   
   // 1. Auth Initialization
   useEffect(() => {
+    if (typeof firebaseConfig === 'undefined') return;
+
     const initAuth = async () => {
       try {
         await signInAnonymously(auth);
@@ -707,18 +774,20 @@ const MassageBookingSystem = () => {
   useEffect(() => {
     if (!user || !db) return;
 
-    // Simplified path: Just 'bookings'
     const q = collection(db, 'bookings');
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const newBookings = {};
         snapshot.forEach((doc) => {
             const data = doc.data();
             const slotId = data.slotId;
+            // V3.3.0 Important: Inject Doc ID for deletion
+            const bookingData = { ...data, id: doc.id };
+
             if (slotId) { 
                 if (!newBookings[slotId]) {
                     newBookings[slotId] = [];
                 }
-                newBookings[slotId].push(data);
+                newBookings[slotId].push(bookingData);
             }
         });
         setBookings(newBookings);
@@ -742,6 +811,22 @@ const MassageBookingSystem = () => {
     return map;
   }, [bookings]);
 
+  // V3.3.0 Feature: Check Duplicate (Client-side)
+  const checkDuplicate = () => {
+      const allRecords = Object.values(bookings).reduce((acc, val) => acc.concat(val), []);
+      
+      const isNameDup = allRecords.some(b => b.name === userInfo.name);
+      if (isNameDup) return `姓名 [${userInfo.name}] 已經預約過了，請勿貪心！`;
+
+      const isEmailDup = allRecords.some(b => b.email === userInfo.email);
+      if (isEmailDup) return `信箱 [${userInfo.email}] 已經使用過了！`;
+
+      const isGsmDup = allRecords.some(b => b.gsm === userInfo.gsm);
+      if (isGsmDup) return `GSM 後四碼 [${userInfo.gsm}] 已經登記過了！`;
+
+      return null;
+  };
+
   const validateUserInfo = () => {
     if (!userInfo.name) return '請填寫姓名';
     if (!userInfo.dept) return '請選擇科部';
@@ -764,9 +849,18 @@ const MassageBookingSystem = () => {
     const currentBookings = bookings[slot.time] || [];
     if (currentBookings.length >= MASSEURS_COUNT) return; 
 
+    // 1. Basic Validation
     const error = validateUserInfo();
     if (error) {
         setFormError(error);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
+
+    // 2. V3.3.0 Feature: Duplicate Check
+    const dupError = checkDuplicate();
+    if (dupError) {
+        setFormError(dupError);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
     }
@@ -783,6 +877,14 @@ const MassageBookingSystem = () => {
     setIsProcessing(true);
 
     try {
+        // Double check duplicate before write (in case of race condition)
+        const dupError = checkDuplicate();
+        if (dupError) {
+            alert(dupError);
+            setIsProcessing(false);
+            return;
+        }
+
         await addDoc(collection(db, 'bookings'), {
             ...userInfo,
             slotId: selectedSlot.time,
@@ -793,7 +895,6 @@ const MassageBookingSystem = () => {
         setSuccessModalOpen(true); 
     } catch (e) {
         console.error("Booking failed:", e);
-        // Show the REAL error from Firebase
         const errorCode = e.code || e.message;
         if (errorCode.includes("permission-denied")) {
             alert("權限不足！請去 Firebase Console -> Firestore Database -> Rules 頁面，把規則改成 `allow read, write: if true;`");
@@ -805,28 +906,29 @@ const MassageBookingSystem = () => {
     }
   };
 
+  // V3.3.2: Single Row Delete Handler
+  const handleDeleteRow = async (docId) => {
+      try {
+          await deleteDoc(doc(db, 'bookings', docId));
+      } catch (e) {
+          console.error("Error deleting document:", e);
+          alert(`刪除失敗：${e.message}`);
+      }
+  }
+
   const handleClearData = async () => {
       if (!user) return;
-      
       try {
         const q = collection(db, 'bookings');
         const snapshot = await getDocs(q);
-        
         const deletePromises = [];
         snapshot.forEach((document) => {
             deletePromises.push(deleteDoc(doc(db, 'bookings', document.id)));
         });
-        
         await Promise.all(deletePromises);
-        console.log("All data cleared successfully");
       } catch (e) {
           console.error("Error clearing data:", e);
-          const errorCode = e.code || e.message;
-          if (errorCode.includes("permission-denied")) {
-             alert("清空失敗：權限不足。請檢查 Firebase Console Rules 設定。");
-          } else {
-             alert(`清空失敗：${errorCode}`);
-          }
+          alert(`清空失敗：${e.message}`);
       }
   }
 
@@ -847,6 +949,7 @@ const MassageBookingSystem = () => {
             onClose={() => setIsAdminOpen(false)} 
             departments={DEPARTMENTS_DATA}
             onClearData={handleClearData}
+            onDeleteRow={handleDeleteRow} // V3.3.2: Pass down delete handler
             user={user}
         />
       );
@@ -871,7 +974,7 @@ const MassageBookingSystem = () => {
                 <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${user ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
              </div>
              <div>
-               <h1 className="text-xl font-bold text-slate-800 leading-tight">住院醫師按摩預約系統 <span className="text-xs text-white bg-emerald-600 px-1.5 py-0.5 rounded ml-1">V3.2.4</span></h1>
+               <h1 className="text-xl font-bold text-slate-800 leading-tight">住院醫師按摩預約系統 <span className="text-xs text-white bg-emerald-600 px-1.5 py-0.5 rounded ml-1">V3.3.3</span></h1>
                <p className="text-xs text-slate-500 flex items-center">
                    {user ? <span className="text-emerald-600 flex items-center"><Wifi className="w-3 h-3 mr-1"/> 雲端已連線</span> : <span className="text-red-500 flex items-center"><WifiOff className="w-3 h-3 mr-1"/> 連線中斷</span>}
                    <span className="mx-2">|</span> 
@@ -917,6 +1020,7 @@ const MassageBookingSystem = () => {
            <div>
              <h3 className="font-bold mb-1 text-base text-slate-800">登記說明</h3>
              <ul className="list-decimal pl-4 space-y-1">
+                <li><span className="font-bold">按摩日期請詳見信件時間</span></li>
                 <li>每一時段為 30 分鐘，但按摩時間為 20 分鐘，保留 10 分鐘時間給你們衝刺到 26 病房。</li>
                 <li>按摩地點在 26 病房 (第二醫療大樓 6 樓)。</li>
                 <li><span className="font-bold text-red-500">11:30 - 11:50 該時段請勿預約。</span></li>
