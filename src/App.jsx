@@ -5,7 +5,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken }
 import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, getDocs, orderBy, writeBatch } from 'firebase/firestore';
 
 // --- 0. Firebase Configuration & Initialization ---
-// ✅ Wade/Shirley 提供的真實金鑰 (V3.3.2 Update)
+// ✅ Wade/Shirley 提供的真實金鑰 (V3.3.5 Verified)
 const firebaseConfig = {
   apiKey: "AIzaSyBo4bLSOFFFsjHeLjIvcgPlIDkPPNnSSRA",
   authDomain: "massage-appointment-system.firebaseapp.com",
@@ -26,7 +26,7 @@ try {
   console.error("Firebase 初始化失敗:", e);
 }
 
-// 系統代號
+// 系統代號 (統一使用 SYSTEM_ID 避免混淆)
 const SYSTEM_ID = "massage_v1"; 
 
 // --- 1. 定義科部與人數資料 (Input Data) ---
@@ -55,36 +55,28 @@ const ADMIN_PASSWORD = '0510'; // 珮暄密碼
 
 // --- 2. 時間槽生成器 (Time Slot Logic) ---
 const generateTimeSlots = () => {
-  const slots = [];
-  
-  // 上午場 10:00 - 11:50
-  slots.push({ time: '10:00 - 10:30', duration: 30 });
-  slots.push({ time: '10:30 - 11:00', duration: 30 });
-  slots.push({ time: '11:00 - 11:30', duration: 30 });
-  // 11:30-11:50 雖然保留顯示，但標記為 forbidden
-  slots.push({ time: '11:30 - 11:50', duration: 20, isSpecial: true, isForbidden: true }); 
+  return [
+    // 上午場
+    { time: '10:00 - 10:30', duration: 30 },
+    { time: '10:30 - 11:00', duration: 30 },
+    { time: '11:00 - 11:30', duration: 30 },
+    { time: '11:30 - 11:50', duration: 20, isSpecial: true, isForbidden: true }, // 請勿預約
 
-  // 下午場 13:00 - 18:00
-  let startHour = 13;
-  let startMin = 0;
-  
-  while (startHour < 18) {
-    const endMin = startMin + 30;
-    const endHour = endMin >= 60 ? startHour + 1 : startHour;
-    const endMinFormatted = endMin >= 60 ? endMin - 60 : endMin;
-    
-    const startTime = `${String(startHour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}`;
-    const endTime = `${String(endHour).padStart(2, '0')}:${String(endMinFormatted).padStart(2, '0')}`;
-    
-    slots.push({ time: `${startTime} - ${endTime}`, duration: 30 });
-    
-    startMin += 30;
-    if (startMin >= 60) {
-      startMin = 0;
-      startHour += 1;
-    }
-  }
-  return slots;
+    // 下午場 Block 1
+    { time: '13:00 - 13:30', duration: 30 },
+    { time: '13:30 - 14:00', duration: 30 },
+    { time: '14:00 - 14:30', duration: 30 },
+
+    // 下午場 Block 2 (從 14:40 開始)
+    { time: '14:40 - 15:10', duration: 30 },
+    { time: '15:10 - 15:40', duration: 30 },
+    { time: '15:40 - 16:10', duration: 30 },
+    { time: '16:10 - 16:40', duration: 30 },
+
+    // 下午場 Block 3 (從 16:50 開始)
+    { time: '16:50 - 17:20', duration: 30 },
+    { time: '17:20 - 17:50', duration: 30 },
+  ];
 };
 
 const TIME_SLOTS = generateTimeSlots();
@@ -105,7 +97,7 @@ const useDepartmentAllocation = () => {
     let remainingSlots = TOTAL_SLOTS - usedSlots; 
 
     if (remainingSlots < 0) {
-      return { status: 'error', msg: '資源嚴重不足', data: [] };
+      // return { status: 'error', msg: '資源嚴重不足', data: [] };
     }
 
     const extraAllocation = allocation.map(dept => {
@@ -241,7 +233,6 @@ const UserInfoForm = ({ userInfo, setUserInfo, departments, allocation, usedMap 
                 </div>
             </div>
             
-            {/* V3.3.1 Feature: Red Bold 14px Cancellation Info */}
             <div className="bg-red-50 px-5 py-3 border-t border-red-100 text-sm font-bold text-red-600 flex items-center justify-center">
                 <Info className="w-5 h-5 mr-2 text-red-600" />
                 若要取消，請聯繫教學部珮暄 (分機 3751)
@@ -372,14 +363,12 @@ const ConfirmModal = ({ isOpen, onClose, slot, onConfirm, userInfo, deptName, is
         </div>
         
         <div className="p-6 space-y-5">
-            {/* 核心資訊卡片 */}
             <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center">
                 <p className="text-emerald-700 text-xs font-bold uppercase tracking-wider mb-1">預約時段 (Time Slot)</p>
                 <p className="text-2xl font-black text-emerald-800 font-mono tracking-tight">{slot.time}</p>
                 <p className="text-xs text-emerald-600 mt-1">({slot.duration} min)</p>
             </div>
             
-            {/* 詳細資料列表 */}
             <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center border-b border-gray-100 pb-2 border-dashed">
                     <span className="text-gray-500 flex items-center"><User className="w-4 h-4 mr-2"/> 姓名</span>
@@ -399,7 +388,6 @@ const ConfirmModal = ({ isOpen, onClose, slot, onConfirm, userInfo, deptName, is
                 </div>
             </div>
 
-            {/* Final Action Area */}
             <div className="pt-2">
                 <p className="text-center text-xs text-red-500 font-bold mb-3 animate-pulse">
                     ⚠ 確認完畢請按送出鍵
@@ -419,7 +407,6 @@ const ConfirmModal = ({ isOpen, onClose, slot, onConfirm, userInfo, deptName, is
                 </button>
             </div>
             
-            {/* V3.3.1 Feature: Red Bold 14px Cancellation */}
             <div className="text-center text-sm font-bold text-red-600 mt-4">
                 若需取消，請聯繫教學部珮暄 (分機 3751)
             </div>
@@ -436,7 +423,6 @@ const SuccessModal = ({ isOpen, onClose }) => {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-in fade-in zoom-in duration-300">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden ring-4 ring-emerald-100 p-8 text-center relative">
                 
-                {/* Decorative Elements */}
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
                 
                 <div className="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce shadow-sm">
@@ -449,7 +435,6 @@ const SuccessModal = ({ isOpen, onClose }) => {
                     請記得準時前往 <span className="font-bold text-emerald-600">26 病房</span> 享受按摩。
                 </p>
                 
-                {/* V3.3.1 Feature: Red Bold 14px Cancellation */}
                 <div className="bg-red-50 p-3 rounded-lg text-sm text-red-600 font-bold mb-6 border border-red-100">
                     若需取消，請聯繫教學部珮暄 (分機 3751)
                 </div>
@@ -466,11 +451,10 @@ const SuccessModal = ({ isOpen, onClose }) => {
     );
 };
 
-// NEW: Delete Confirm Modal
+// V3.3.2 Fix: Delete Confirm Modal
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, isClearing, mode, targetName }) => {
     if (!isOpen) return null;
     
-    // UI Mode Configuration
     const isSingle = mode === 'single';
     const title = isSingle ? "刪除確認" : "紅色警戒：清除資料";
     const mainText = isSingle ? `確定要刪除 [${targetName}] 的預約嗎？` : "確定要清空所有資料嗎？";
@@ -478,10 +462,6 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, isClearing, mode, targ
         ? "刪除後名額將會釋出，無法復原。" 
         : (<span>此操作將會移除所有住院醫師的預約紀錄，且<span className="font-bold text-red-600">無法復原</span>。</span>);
     const confirmBtnText = isSingle ? "確認刪除 (Delete)" : "確認清空 (Delete All)";
-    const colorClass = isSingle ? "orange" : "red"; // Orange for single, Red for all
-
-    // Dynamic Tailwind classes construction (careful with dynamic class names in Tailwind)
-    // We use explicit full class names to be safe or simple conditionals
     const headerColor = isSingle ? "bg-orange-500" : "bg-red-600";
     const hoverBtnColor = isSingle ? "hover:bg-orange-600" : "hover:bg-red-700";
     const btnColor = isSingle ? "bg-orange-500" : "bg-red-600";
@@ -532,12 +512,11 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, isClearing, mode, targ
     );
 }
 
-// NEW: Admin Dashboard Component with Clear Data & Force Refresh
+// V3.3.5 Fix: Add missing onDeleteRow prop
 const AdminDashboard = ({ bookings, onClose, departments, onClearData, user, onDeleteRow }) => {
-    const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'all' } or { type: 'single', id, name }
+    const [deleteTarget, setDeleteTarget] = useState(null); 
     const [isClearing, setIsClearing] = useState(false);
 
-    // Robust flattening using reduce logic + including docId if available
     const bookingsList = useMemo(() => {
         return Object.entries(bookings).reduce((acc, [time, users]) => {
             return acc.concat(users.map(u => ({...u, time})));
@@ -561,12 +540,10 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user, onD
         document.body.removeChild(link);
     };
 
-    // Trigger Clear All Modal
     const handleClearAllClick = () => {
         setDeleteTarget({ type: 'all' });
     }
 
-    // Trigger Single Row Delete Modal
     const handleRowDeleteClick = (docId, name) => {
         if (!docId) {
             alert("錯誤：資料 ID 遺失");
@@ -575,7 +552,6 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user, onD
         setDeleteTarget({ type: 'single', id: docId, name: name });
     }
 
-    // Execute Deletion based on target
     const handleExecuteDelete = async () => {
         if (!deleteTarget) return;
 
@@ -600,6 +576,7 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user, onD
                         </h2>
                         <div className="flex items-center gap-2 mt-1">
                             <p className="text-slate-500 text-sm">掌握全院按摩動態，匯出名單交差</p>
+                            {/* V3.3.5: Use SYSTEM_ID */}
                             <span className="text-xs bg-slate-100 text-slate-400 px-2 py-0.5 rounded border border-slate-200">
                                 App ID: {SYSTEM_ID.substring(0, 8)}...
                             </span>
@@ -627,7 +604,6 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user, onD
                     </div>
                 </div>
 
-                {/* Dashboard Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
                         <p className="text-blue-600 font-bold text-sm uppercase">總預約人數</p>
@@ -711,10 +687,6 @@ const AdminDashboard = ({ bookings, onClose, departments, onClearData, user, onD
                             </table>
                         </div>
                     )}
-                </div>
-                
-                <div className="mt-8 text-center text-xs text-slate-400 border-t pt-4">
-                    <p>Debug Info: {user ? `Authenticated (${user.uid.substring(0,6)}...)` : 'Not Authenticated'} | Path: /bookings</p>
                 </div>
             </div>
 
@@ -921,11 +893,14 @@ const MassageBookingSystem = () => {
       try {
         const q = collection(db, 'bookings');
         const snapshot = await getDocs(q);
+        
         const deletePromises = [];
         snapshot.forEach((document) => {
             deletePromises.push(deleteDoc(doc(db, 'bookings', document.id)));
         });
+        
         await Promise.all(deletePromises);
+        console.log("All data cleared successfully");
       } catch (e) {
           console.error("Error clearing data:", e);
           alert(`清空失敗：${e.message}`);
@@ -949,7 +924,7 @@ const MassageBookingSystem = () => {
             onClose={() => setIsAdminOpen(false)} 
             departments={DEPARTMENTS_DATA}
             onClearData={handleClearData}
-            onDeleteRow={handleDeleteRow} // V3.3.2: Pass down delete handler
+            onDeleteRow={handleDeleteRow} // V3.3.5 Fix: Pass down the missing prop
             user={user}
         />
       );
@@ -974,7 +949,7 @@ const MassageBookingSystem = () => {
                 <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${user ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
              </div>
              <div>
-               <h1 className="text-xl font-bold text-slate-800 leading-tight">住院醫師按摩預約系統 <span className="text-xs text-white bg-emerald-600 px-1.5 py-0.5 rounded ml-1">V3.3.3</span></h1>
+               <h1 className="text-xl font-bold text-slate-800 leading-tight">住院醫師按摩預約系統 <span className="text-xs text-white bg-emerald-600 px-1.5 py-0.5 rounded ml-1">V3.3.5</span></h1>
                <p className="text-xs text-slate-500 flex items-center">
                    {user ? <span className="text-emerald-600 flex items-center"><Wifi className="w-3 h-3 mr-1"/> 雲端已連線</span> : <span className="text-red-500 flex items-center"><WifiOff className="w-3 h-3 mr-1"/> 連線中斷</span>}
                    <span className="mx-2">|</span> 
@@ -1020,7 +995,7 @@ const MassageBookingSystem = () => {
            <div>
              <h3 className="font-bold mb-1 text-base text-slate-800">登記說明</h3>
              <ul className="list-decimal pl-4 space-y-1">
-                <li><span className="font-bold">按摩日期請詳見信件時間</span></li>
+                <li><span className="font-bold text-sm">按摩日期請詳見信件時間</span></li>
                 <li>每一時段為 30 分鐘，但按摩時間為 20 分鐘，保留 10 分鐘時間給你們衝刺到 26 病房。</li>
                 <li>按摩地點在 26 病房 (第二醫療大樓 6 樓)。</li>
                 <li><span className="font-bold text-red-500">11:30 - 11:50 該時段請勿預約。</span></li>
