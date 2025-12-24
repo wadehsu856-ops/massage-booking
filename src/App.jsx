@@ -60,15 +60,15 @@ const generateTimeSlots = () => {
     { time: '10:00 - 10:30', duration: 30 },
     { time: '10:30 - 11:00', duration: 30 },
     { time: '11:00 - 11:30', duration: 30 },
-    { time: '11:30 - 11:50', duration: 20, isSpecial: true, isForbidden: true }, // 請勿預約
+    { time: '11:30 - 11:50', duration: 20, isSpecial: true, isForbidden: true }, // 請勿預約 (固定鎖死)
 
     // 下午場 Block 1
     { time: '13:00 - 13:30', duration: 30 },
     { time: '13:30 - 14:00', duration: 30 },
-    { time: '14:00 - 14:30', duration: 30, isForbidden: true }, // V3.3.5 Patch: 鎖定此時段
+    { time: '14:00 - 14:30', duration: 30 }, // V3.3.6: 恢復可預約 (Unlock)
 
     // 下午場 Block 2 (從 14:40 開始)
-    { time: '14:40 - 15:10', duration: 30 },
+    { time: '14:40 - 15:10', duration: 30, isForbidden: true }, // V3.3.6: 鎖定此時段 (Lock)
     { time: '15:10 - 15:40', duration: 30 },
     { time: '15:40 - 16:10', duration: 30 },
     { time: '16:10 - 16:40', duration: 30 },
@@ -250,7 +250,7 @@ const QuotaTable = ({ allocation, usedMap }) => {
           科部配額 (即時扣除)
         </h3>
         <span className="text-xs bg-slate-200 px-2 py-1 rounded text-slate-600 font-mono">
-           可預約名額: {TOTAL_SLOTS} (11:30除外)
+           可預約名額: {TOTAL_SLOTS} (扣除禁用時段)
         </span>
       </div>
       
@@ -949,7 +949,7 @@ const MassageBookingSystem = () => {
                 <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${user ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
              </div>
              <div>
-               <h1 className="text-xl font-bold text-slate-800 leading-tight">住院醫師按摩預約系統 <span className="text-xs text-white bg-emerald-600 px-1.5 py-0.5 rounded ml-1">V3.3.5</span></h1>
+               <h1 className="text-xl font-bold text-slate-800 leading-tight">住院醫師按摩預約系統 <span className="text-xs text-white bg-emerald-600 px-1.5 py-0.5 rounded ml-1">V3.3.6</span></h1>
                <p className="text-xs text-slate-500 flex items-center">
                    {user ? <span className="text-emerald-600 flex items-center"><Wifi className="w-3 h-3 mr-1"/> 雲端已連線</span> : <span className="text-red-500 flex items-center"><WifiOff className="w-3 h-3 mr-1"/> 連線中斷</span>}
                    <span className="mx-2">|</span> 
