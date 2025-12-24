@@ -65,7 +65,7 @@ const generateTimeSlots = () => {
     // 下午場 Block 1
     { time: '13:00 - 13:30', duration: 30 },
     { time: '13:30 - 14:00', duration: 30 },
-    { time: '14:00 - 14:30', duration: 30 },
+    { time: '14:00 - 14:30', duration: 30, isForbidden: true }, // V3.3.5 Patch: 鎖定此時段
 
     // 下午場 Block 2 (從 14:40 開始)
     { time: '14:40 - 15:10', duration: 30 },
@@ -995,11 +995,11 @@ const MassageBookingSystem = () => {
            <div>
              <h3 className="font-bold mb-1 text-base text-slate-800">登記說明</h3>
              <ul className="list-decimal pl-4 space-y-1">
-                <li><span className="font-bold text-sm">按摩日期請詳見信件時間</span></li>
-                <li>每一時段為 30 分鐘，但按摩時間為 20 分鐘，保留 10 分鐘時間給你們衝刺到 26 病房。</li>
-                <li>按摩地點在 26 病房 (第二醫療大樓 6 樓)。</li>
-                <li><span className="font-bold text-red-500">11:30 - 11:50 該時段請勿預約。</span></li>
-                <li>如有任何疑問，請聯繫教學部珮暄 (分機 3751) 。</li>
+               <li><span className="font-bold text-sm">按摩日期請詳見信件時間</span></li>
+               <li>每一時段為 30 分鐘，但按摩時間為 20 分鐘，保留 10 分鐘時間給你們衝刺到 26 病房。</li>
+               <li>按摩地點在 26 病房 (第二醫療大樓 6 樓)。</li>
+               <li><span className="font-bold text-red-500">11:30 - 11:50 該時段請勿預約。</span></li>
+               <li>如有任何疑問，請聯繫教學部珮暄 (分機 3751) 。</li>
              </ul>
            </div>
         </div>
@@ -1091,9 +1091,9 @@ const MassageBookingSystem = () => {
 
                   {/* Capacity Indicator */}
                   <div className="flex items-center gap-1 mb-2">
-                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-slate-200 text-slate-500' : 'bg-emerald-100 text-emerald-700'}`}>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-slate-200 text-slate-500' : 'bg-emerald-100 text-emerald-700'}`}>
                         {isFull ? '額滿' : `時段剩 ${availableCount} 位`}
-                     </span>
+                      </span>
                   </div>
 
                   {/* Booked Users List */}
