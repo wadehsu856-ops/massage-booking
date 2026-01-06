@@ -157,7 +157,7 @@ const SystemClosedScreen = () => {
             </div>
             
             <p className="mt-8 text-xs text-slate-600 font-mono">
-                System Designed by Shirley
+                System Designed by Wade (X86)
             </p>
         </div>
     );
@@ -1210,7 +1210,7 @@ const MassageBookingSystem = () => {
       />
       
       <footer className="text-center text-slate-400 text-xs py-4">
-        Designed by Wade  - Cloud-Native Architecture, High Availability.
+        Designed by Wade (X86 Engineer) - Cloud-Native Architecture, High Availability.
       </footer>
     </div>
   );
